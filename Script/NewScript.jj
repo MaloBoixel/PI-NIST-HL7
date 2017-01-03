@@ -1,0 +1,304 @@
+PARSER_BEGIN(NewScript)
+
+/** New line translator. */
+public class NewScript {
+
+  /** Main entry point. */
+  public static void main(String args[]) throws ParseException {
+    NewScript parser = new NewScript(System.in);
+    parser.ExpressionList();
+  }
+
+}
+
+PARSER_END(NewScript)
+
+SKIP :
+{
+" "
+| "\t"
+| "\r"
+}
+
+TOKEN :
+{
+  < PID: "PID" >
+|
+  < OBX: "OBX" >
+|
+  < RXR: "RXR" >
+|
+  < RXA: "RXA" >
+|
+  < STRING: "\""["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","_","0"-"9"] )* "\"">
+|
+  < NUM: ( ["0"-"9"] )+ >
+|
+  < PRESET_VALUE: "["["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","_","0"-"9"] )* "]">
+|
+  < UNQUOTED_STRING : ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","_","0"-"9"] )* >
+
+}
+void ExpressionList() :
+{
+	String s;
+	String result="";
+}
+{
+	{
+	  System.out.println("Please type in an expression followed by a \";\" or ^D to quit:");
+	  System.out.println("");
+	}
+  ( s=Command() ";""\n"
+	{
+	  result+=s+";"+"\n";
+	}
+	|
+	"\n"
+		{
+			result+="\n";
+		}
+  )*
+  <EOF>
+  	{
+  		System.out.println("");
+  		System.out.println(result);
+  	}
+}
+
+String Command() :
+{
+	//java.util.Vector termimage = new java.util.Vector();
+	String statement;
+	String reference;
+	String s;
+}
+{
+	(reference=Reference()
+		{
+	  		//termimage.addElement(s);
+		}
+  	"=" statement=Statement()
+		{
+	  	//termimage.addElement(s);
+		}
+  
+		{
+			reference += " = " + statement;
+	    	return reference;
+		}
+	)
+	|
+	s=UseContext()
+		{
+			return s;
+		}
+	|
+	s=UseScenario()
+		{
+			return s;
+		}
+	|
+	s=Function()
+		{
+			return s;
+		}
+}
+
+String Reference():
+{
+	String s;
+	java.util.Vector termimage = new java.util.Vector();
+}
+{
+	"$"s = SegId()
+			{
+				termimage.addElement(s);
+			}
+	("." s=FieldNum()
+			{
+				termimage.addElement(s);
+			}
+	("." s=FieldNum()
+			{
+				termimage.addElement(s);
+			}
+	)?
+	)?
+	{
+		s = (String)termimage.elementAt(0);
+		if(termimage.size() >= 2){
+			s += "." + (String)termimage.elementAt(1);
+			if(termimage.size() >= 3){
+				s+= "." + (String)termimage.elementAt(2);
+			}
+		}
+		return s;
+	}
+}
+
+String Function():
+{
+	Token name;
+	String s;
+}
+{
+	name = <UNQUOTED_STRING>
+	"("
+	s=Arguments()
+	")"
+		{
+			return name+"("+s+")";
+		}
+}
+
+String Arguments():
+{
+	Token arg;
+	String s="";
+}
+{
+	(
+	arg=<UNQUOTED_STRING>
+		{
+			s += arg.image;
+		}
+	(
+	","
+		{
+			s += ",";
+		}
+	)?
+	)*
+	{
+		return s;
+	}
+}
+
+String SegId():
+{
+	Token num;
+	Token num2;
+	String s;
+}
+{
+	s = Identifier()
+	"-"
+	num = <NUM>
+			{
+				return s+"-"+num.image;
+			}
+}
+
+String Identifier():
+{
+	Token id;
+}
+{
+	id = <PID>
+			{
+				return id.image;
+			}
+	|
+	id = <OBX>
+			{
+				return id.image;
+			}
+	|
+	id = <RXA>
+			{
+				return id.image;
+			}
+	|
+	id = <RXR>
+			{
+				return id.image;
+			}
+
+}
+
+String FieldNum():
+{
+	Token num;
+	Token num2;
+	String s;
+}
+{
+	num=<NUM>
+			{
+				return num.image;
+			}
+}
+
+String SubNum():
+{
+	Token num;
+	Token num2;
+	String s;
+}
+{
+	num=<NUM>
+			{
+				return num.image;
+			}
+}
+
+String UseContext():
+{
+	Token context;
+	String s;
+}
+{
+	"use context :: "
+	context=<UNQUOTED_STRING>
+			{
+				s = "use context :: " + context.image;
+				return s;
+			}
+}
+
+String UseScenario():
+{
+	Token scenario;
+	String s;
+}
+{
+	"use scenario :: "
+	scenario=<UNQUOTED_STRING>
+			{
+				s = "use scenario :: " + scenario.image;
+				return s;
+			}
+}
+
+String Statement():
+{
+	Token token;
+	String s;
+}
+{
+	token=<NUM>
+			{
+				return token.image;
+			}
+	|
+	token = <STRING>
+			{
+				return token.image;
+			}
+	|
+	s = Reference()
+			{
+				return s;
+			}
+	|
+	token=<PRESET_VALUE>
+		{
+			return token.image;
+		}
+	|
+	s=Function()
+		{
+			return s;
+		}
+}
