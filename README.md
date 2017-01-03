@@ -4,7 +4,7 @@
 
 Add javacc to PATH
 
-Example Mac : /Users/boixel/Downloads/javacc-6.0/bin/
+Example Mac : PATH=$PATH:/Users/boixel/Downloads/javacc-6.0/bin/
 
 Use JavaCC : 
 
